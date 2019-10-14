@@ -9,7 +9,7 @@ import Lambda.Types.Term (Variable, readVar, readTerm, Term(V))
 import Lambda.ParserHelper (readOnlyChars, readWhiteSpaces, readChar, readUntilOneOf)
 
 type Prog = [Command]
-data Command = Let Variable Term | Print String | PrintLn String | PrintT Term | PrintNF Term | TraceNF Term | TraceNFMax Int Term deriving Show
+data Command = Let Variable Term | Print String | PrintLn String | PrintT Term | PrintNF Term | TraceNF Term | TraceNFMax Int Term | Import String deriving Show
 
 instance {-# OVERLAPPING #-} Read Prog where
     readsPrec d = readProg
@@ -37,7 +37,7 @@ instance Read Command where
     readsPrec d = readCommand
 
 readCommand t = readLet t ++ readPrint t ++ readPrintT t ++ readPrintNF t ++
-            readPrintLn t ++ readTraceNF t ++ readTraceNFMax t
+            readPrintLn t ++ readTraceNF t ++ readTraceNFMax t ++ readImport t
 
 readLet t = do
         ("let", u) <- lex t
@@ -76,4 +76,9 @@ readPrintNF t = do
         ("printNF", u) <- lex t
         (term, v) <- readWhiteSpaces readTerm u
         return (PrintNF term, v)
+
+readImport t = do
+    ("import", u) <- lex t    
+    (file, v) <- readWhiteSpaces (readUntilOneOf ";") u
+    return (Import file, v)
 

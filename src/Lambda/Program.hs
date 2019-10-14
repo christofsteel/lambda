@@ -8,15 +8,17 @@ module Lambda.Program (
 where
 import Lambda.Types
 import Lambda.Lambda
+import Lambda.ParserHelper
 
 import System.Exit
 import Data.Maybe
 import qualified Data.Map.Strict as M
 import Control.Monad.State
 import Data.Functor.Identity
+import System.FilePath.Posix
 
-run :: String -> (Term -> String) -> Prog -> IO()
-run arr sh p = evalStateT (runIO arr sh p) []
+run :: FilePath -> String -> (Term -> String) -> Prog -> IO()
+run importPath arr sh p = evalStateT (runIO importPath arr sh p) []
 --run = run' []
 
 runStep :: String -> (Term -> String) -> Command -> State [(Variable, Term)] (Maybe String)
@@ -46,14 +48,22 @@ printMaybe (Just s) = putStr s
 liftId :: Monad m => StateT s Identity a -> StateT s m a
 liftId = mapStateT (return.runIdentity) 
 
-runIO :: String -> (Term -> String) -> Prog -> StateT [(Variable, Term)] IO ()
-runIO arr sh [] = liftIO exitSuccess 
-runIO arr sh (x:xs) = do
+runIO :: FilePath -> String -> (Term -> String) -> Prog -> StateT [(Variable, Term)] IO ()
+runIO _ _ _ [] = return ()
+runIO importPath arr sh (Import f:xs) = do    
+               progStr <- liftIO $ do 
+                                 content <- readFile $ importPath </> f
+                                 return $ replace '\n' ';' $ init content
+               let prog = read progStr
+               let importPath = takeDirectory $ importPath </> f
+               runIO importPath arr sh $ prog ++ xs
+runIO importPath arr sh (x:xs) = do
     state <- get
     output <- liftId $ runStep arr sh x
     liftIO $ printMaybe output
-    runIO arr sh xs
+    runIO importPath arr sh xs
 
+        {-
 run' :: [(Variable, Term)] -> String -> (Term -> String) -> Prog -> IO ()
 run' _ a sh [] = exitSuccess
 run' lets a sh (Let v t:prog) = run' ((v, t):lets) a sh prog
@@ -75,7 +85,7 @@ run' lets a sh (TraceNF t:prog) = do
 run' lets a sh (TraceNFMax i t:prog) = do 
             putStrLn $ getStepsMax sh a i $ applyLets t lets 
             run' lets a sh prog
-    
+    -}
 
 -- This is not the most efficient way, but I thought it was nice to let
 -- the lambda calculus solve its variables by itself

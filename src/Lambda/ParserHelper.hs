@@ -5,6 +5,7 @@ module Lambda.ParserHelper (
     readOnlyChars,
     readWhiteSpaces,
     readWhiteSpaces1,
+    replace,
 ) where
 
 import Data.Char
@@ -35,3 +36,9 @@ readWhiteSpaces1 reader (x:xs)
     | isSpace x = reader (dropWhile isSpace xs)
     | x == '('  = reader (x:xs)
     | otherwise = fail "no whitespaces"
+
+replace :: Char -> Char -> String -> String
+replace _ _ [] = []
+replace a b (x:xs)
+    | x == a = b:replace a b xs
+    | otherwise = x:replace a b xs

@@ -1,4 +1,6 @@
 module Main where
+
+import Lambda.ParserHelper
 import Lambda.Program
 import Lambda.REPL
 import Lambda.Consts
@@ -6,6 +8,8 @@ import Lambda.Types
 
 import System.Environment
 import System.Exit
+import System.Directory
+import System.FilePath.Posix
 
 import Control.Monad.State
 
@@ -65,18 +69,20 @@ main = do
                     then explShow'
                     else minShow'        
         if "-r" `elem` args || "--repl" `elem` args 
-           then runRepl arr (sh lamb)
+           then do 
+               relimportPath <- getCurrentDirectory                    
+               importPath <- makeAbsolute relimportPath
+               runRepl importPath arr (sh lamb)
            else do
-               progStr <- if "-f" `elem` args || "--file" `elem` args
+               (progStr, importPath) <- if "-f" `elem` args || "--file" `elem` args
                              then do
                                  content <- readFile $ last args
-                                 return $ replace '\n' ';' $ init content
-                             else return $ replace '\n' ';' $ last args
+                                 importPath <- makeAbsolute  $ takeDirectory $ last args 
+                                 return $ (replace '\n' ';' $ init content, importPath)
+                             else do
+                                 relimportPath <- getCurrentDirectory                    
+                                 importPath <- makeAbsolute relimportPath
+                                 return $ (replace '\n' ';' $ last args, importPath)
                let prog = read progStr
-               run arr (sh lamb) prog
+               run importPath arr (sh lamb) prog
 
-replace :: Char -> Char -> String -> String
-replace _ _ [] = []
-replace a b (x:xs)
-    | x == a = b:replace a b xs
-    | otherwise = x:replace a b xs
