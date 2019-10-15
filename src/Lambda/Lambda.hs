@@ -1,13 +1,14 @@
-module Lambda.Lambda (
-    lbeta,
-    findNF,
-    getSteps,
-    getStepsMax
-    ) where
+module Lambda.Lambda
+  ( lbeta
+  , findNF
+  , getSteps
+  , getStepsMax
+  )
+where
 
-import Lambda.Types
-import qualified Data.Set as S
-import Data.Maybe
+import           Lambda.Types
+import qualified Data.Set                      as S
+import           Data.Maybe
 
 
 -- Left Betareduction. 
@@ -15,44 +16,40 @@ import Data.Maybe
 -- lbeta t = Nothing, if no betareduction is possible
 lbeta :: Term -> Maybe Term
 lbeta (A (L var t1) t2) = Just (subs t1 var t2)
-lbeta (A (V var) t1) = lbeta t1 >>= \t1' -> return $ A (V var) t1'
-lbeta (A t1 t2) = lbeta t1 >>= \t1' -> return $ A t1' t2
-lbeta (L var t1) = lbeta t1 >>= \t1' -> return $ L var t1'
-lbeta (V var) = Nothing
+lbeta (A (V var   ) t1) = lbeta t1 >>= \t1' -> return $ A (V var) t1'
+lbeta (A t1         t2) = lbeta t1 >>= \t1' -> return $ A t1' t2
+lbeta (L var        t1) = lbeta t1 >>= \t1' -> return $ L var t1'
+lbeta (V var          ) = Nothing
 
 -- Free Variables
 fv :: Term -> S.Set Variable
-fv (V var) = S.fromList [var]
+fv (V var  ) = S.fromList [var]
 fv (L var p) = fv p S.\\ S.fromList [var]
-fv (A p q) = S.union (fv p) (fv q)
+fv (A p   q) = S.union (fv p) (fv q)
 
 -- substitution. subs p x n = p[x := n]
 subs :: Term -> Variable -> Term -> Term
-subs (V y) x n
-    | x == y = n
-    | otherwise = V y
+subs (V y) x n | x == y    = n
+               | otherwise = V y
 subs (A p q) x n = A (subs p x n) (subs q x n)
 subs (L y p) x n
-    | y == x = L x p
-    | y /= x && (not (S.member y (fv n)) || not (S.member x (fv p))) 
-        = L y (subs p x n)
-    | otherwise = L z (subs (subs p y (V z)) x n)
-        where z = newFV y (S.union (fv p) (fv n))
+  | y == x = L x p
+  | y /= x && (not (S.member y (fv n)) || not (S.member x (fv p))) = L y (subs p x n)
+  | otherwise = L z (subs (subs p y (V z)) x n)
+  where z = newFV y (S.union (fv p) (fv n))
 
 -- newFV x v
 -- generates a variable, that is not in v with a name based on x
 newFV :: Variable -> S.Set Variable -> Variable
-newFV y s
-    | S.member y' s = newFV y' s
-    | otherwise = y'
-      where y' = y ++ "'"
+newFV y s | S.member y' s = newFV y' s
+          | otherwise     = y'
+  where y' = y ++ "'"
 
 -- betasteps (Just t)
 -- generates an infinite list of betareductions
 betasteps :: Maybe Term -> [Maybe Term]
-betasteps (Just t) = Just t : betasteps t'
-    where t' = lbeta t
-betasteps Nothing = repeat Nothing
+betasteps (Just t) = Just t : betasteps t' where t' = lbeta t
+betasteps Nothing  = repeat Nothing
 
 -- betatepsToNF t
 -- generates a list of betareductions until the term is in normal form
@@ -67,7 +64,7 @@ findNF t = last $ betastepsToNF t
 -- findNFMax i t
 -- returns the normal form of t, but computes only the first i steps.
 findNFMax :: Int -> Term -> Term
-findNFMax i t = last $ take i $ betastepsToNF t 
+findNFMax i t = last $ take i $ betastepsToNF t
 
 -- getSteps sh a t
 -- returns a pretty string of all the betareductions to the normal form
@@ -75,15 +72,15 @@ findNFMax i t = last $ take i $ betastepsToNF t
 -- a is the string for the arrow. e.g. "->b"
 -- t is the term
 getSteps :: (Term -> String) -> String -> Term -> String
-getSteps sh a t = sh t ++ 
-    concatMap (\t -> "\n\t" ++ a ++ " " ++ sh t) (safetail $ betastepsToNF t)
+getSteps sh a t = sh t
+  ++ concatMap (\t -> "\n\t" ++ a ++ " " ++ sh t) (safetail $ betastepsToNF t)
 
 -- getStepsMax sh a i t
 -- like getSteps, but computes only the first i steps
 getStepsMax :: (Term -> String) -> String -> Int -> Term -> String
-getStepsMax sh a i t = sh t ++ 
-    concatMap (\t -> "\n\t" ++ a ++ " " ++ sh t) 
-        (safetail $ take i $ betastepsToNF t)
+getStepsMax sh a i t = sh t ++ concatMap
+  (\t -> "\n\t" ++ a ++ " " ++ sh t)
+  (safetail $ take i $ betastepsToNF t)
 
 
 safetail [] = []

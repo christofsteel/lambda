@@ -1,14 +1,10 @@
 name:                lambda
-version:             0.1.0.0
+version:             0.2.0.0
 github:              "githubuser/lambda"
 license:             Apache2
 author:              "Christoph stahl"
 maintainer:          "christoph.stahl@tu-dortmund.de"
 copyright:           "2019 Christoph Stahl"
-
-extra-source-files:
-- README.md
-- ChangeLog.md
 
 # Metadata used when publishing your package
 # synopsis:            Short description of your package
