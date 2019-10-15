@@ -1,5 +1,4 @@
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 module Lambda.Types.Prog (
     Prog,
     Command (..)
@@ -9,7 +8,7 @@ import Lambda.Types.Term (Variable, readVar, readTerm, Term(V))
 import Lambda.ParserHelper (readOnlyChars, readWhiteSpaces, readChar, readUntilOneOf)
 
 type Prog = [Command]
-data Command = Let Variable Term | Print String | PrintLn String | PrintT Term | PrintNF Term | TraceNF Term | TraceNFMax Int Term | Import String deriving Show
+data Command = Let Variable Term | Print String | PrintLn String | PrintT Term | PrintNF Term | TraceNF Term | TraceNFMax Int Term | Import String | Step Variable | Set String | Unset String deriving Show
 
 instance {-# OVERLAPPING #-} Read Prog where
     readsPrec d = readProg
@@ -37,7 +36,8 @@ instance Read Command where
     readsPrec d = readCommand
 
 readCommand t = readLet t ++ readPrint t ++ readPrintT t ++ readPrintNF t ++
-            readPrintLn t ++ readTraceNF t ++ readTraceNFMax t ++ readImport t
+            readPrintLn t ++ readTraceNF t ++ readTraceNFMax t ++ readImport t ++
+            readStep t ++ readSet t ++ readUnset t
 
 readLet t = do
         ("let", u) <- lex t
@@ -80,5 +80,19 @@ readPrintNF t = do
 readImport t = do
     ("import", u) <- lex t    
     (file, v) <- readWhiteSpaces (readUntilOneOf ";") u
-    return (Import file, v)
+    return (Import ((unwords.words) file), v)
 
+readStep t = do
+    ("step", u) <- lex t
+    (V var, v) <- readVar u
+    return (Step var, v)
+
+readSet t = do
+    ("set", u) <- lex t
+    (option, v) <- readWhiteSpaces  (readUntilOneOf ";") u
+    return (Set ((unwords.words) option), v)
+
+readUnset t = do
+    ("unset", u) <- lex t
+    (option, v) <- readWhiteSpaces  (readUntilOneOf ";") u
+    return (Unset ((unwords.words) option), v)

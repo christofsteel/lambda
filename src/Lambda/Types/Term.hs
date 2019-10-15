@@ -1,8 +1,7 @@
 module Lambda.Types.Term (
     Variable,
     Term (L, A, V),
-    explShow',
-    minShow',
+    lshow,
     readTerm,
     readVar
 ) where
@@ -13,11 +12,14 @@ import Data.Char
 type Variable = String
 data Term = L Variable Term | A Term Term | V Variable deriving Eq
 instance Show Term where
-    show = explShow' '\\'
+    show = explShow' "\\"
+
+lshow True = explShow'
+lshow False = minShow'
 
 -- explShow' l t
 -- returns an explicitly parenthesized string of the term t. The lambda sign is l
-explShow' l (L var t) = "(" ++ [l] ++ var ++ "." ++ explShow' l t ++ ")"
+explShow' l (L var t) = "(" ++ l ++ var ++ "." ++ explShow' l t ++ ")"
 explShow' l (A t1 t2) = "(" ++ explShow' l t1 ++ " " ++ explShow' l t2 ++ ")"
 explShow' l (V var) = var
 
@@ -30,7 +32,7 @@ explShow' l (V var) = var
 -- a (lb.c) => a lb.c
 -- a lb.(c d) => a lb.c d
 minShow' l (L var (L var' t)) = minShow' l (L (var ++ " " ++ var') t)
-minShow' l (L var t) = [l] ++ var ++ "." ++ minShow' l t
+minShow' l (L var t) = l ++ var ++ "." ++ minShow' l t
 minShow' l (A t1@(A t1' t2'@(L v t')) t2@(A t1'' t2'')) = "(" ++ minShow' l t1 ++ ") (" ++ minShow' l t2 ++ ")"
 minShow' l (A t1@(A t1' t2'@(L v t')) t2) = "(" ++ minShow' l t1 ++ ") " ++ minShow' l t2
 minShow' l (A t1@(A t1' t2') t2@(A t1'' t2'')) = minShow' l t1 ++ " (" ++ minShow' l t2 ++ ")"

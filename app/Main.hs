@@ -1,4 +1,4 @@
-module Main where
+module Main (main) where
 
 import Lambda.ParserHelper
 import Lambda.Program
@@ -29,15 +29,20 @@ printUsage = do
     putStrLn   "  PROGRAM           a series of COMMANDs, seperated by ';' or a linebreak."
     putStrLn   ""
     putStrLn   "  COMMANDs:"
+    putStrLn   "    import FILE          imports and executes a FILE."
     putStrLn   "    print STRING         prints STRING."
     putStrLn   "    printLn STRING       prints STRING, followed by a linebreak."
     putStrLn   "    let VAR = TERM       lets VAR be TERM in all subsequent TERMs."
+    putStrLn   "    step VAR             executes beta reduction on the term stored in VAR and"
+    putStrLn   "                         stores the resuting term in VAR"
     putStrLn   "    printT TERM          prints term TERM."
     putStrLn   "    printNF TERM         prints the beta normal form for TERM. If it has none,"
     putStrLn   "                         calculates indefinitely."
     putStrLn   "    traceNF TERM         prints all (left) beta reductions for TERM, until the"
     putStrLn   "                         term is in beta normal form."
     putStrLn   "    traceNFMax INT TERM  like traceNF, but computes only the first INT steps."
+    putStrLn   "    set OPTION           sets OPTION, where OPTION can be one of [ASCII, EXPLICIT]."
+    putStrLn   "    unset OPTION         unsets OPTION, where OPTION can be one of [ASCII, EXPLICIT]."
     putStrLn   ""
     putStrLn   "  TERM:             TERM can be an ABSTRACTION, an APPLICATION or a VAR."
     putStrLn   "    ABSTRACTION:    A term in the form '\\[VAR..].TERM', were [VAR..] are"
@@ -65,24 +70,22 @@ main = do
         let lamb = if "-a" `elem` args || "--ascii" `elem` args
                     then lambda
                     else lambdaUTF8
-        let sh = if "-e" `elem` args || "--explicit" `elem` args
-                    then explShow'
-                    else minShow'        
+        let ex = "-e" `elem` args || "--explicit" `elem` args
         if "-r" `elem` args || "--repl" `elem` args 
            then do 
                relimportPath <- getCurrentDirectory                    
                importPath <- makeAbsolute relimportPath
-               runRepl importPath arr (sh lamb)
+               runRepl importPath arr lamb ex
            else do
                (progStr, importPath) <- if "-f" `elem` args || "--file" `elem` args
                              then do
                                  content <- readFile $ last args
                                  importPath <- makeAbsolute  $ takeDirectory $ last args 
-                                 return $ (replace '\n' ';' $ init content, importPath)
+                                 return (replace '\n' ';' $ init content, importPath)
                              else do
                                  relimportPath <- getCurrentDirectory                    
                                  importPath <- makeAbsolute relimportPath
-                                 return $ (replace '\n' ';' $ last args, importPath)
+                                 return (replace '\n' ';' $ last args, importPath)
                let prog = read progStr
-               run importPath arr (sh lamb) prog
+               run importPath arr lamb ex prog
 

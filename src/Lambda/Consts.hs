@@ -6,5 +6,5 @@ module Lambda.Consts (
     ) where
 arrow = "(->b)"
 arrowUTF8 = "→β"
-lambda = '\\'
-lambdaUTF8 = 'λ'
+lambda = "\\"
+lambdaUTF8 = "λ"

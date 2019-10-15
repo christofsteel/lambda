@@ -3,8 +3,7 @@ module Lambda.Types (
     Variable,
     Prog,
     Command (..),
-    explShow',
-    minShow'
+    lshow,
     ) where
 import Lambda.Types.Prog(Prog, Command (..))
 import Lambda.Types.Term
