@@ -38,7 +38,7 @@ isCIPrefixOf n m = map toUpper n `isPrefixOf` map toUpper m
 runRepl :: FilePath -> String -> String -> Bool -> IO ()
 runRepl importPath arr l ex = evalStateT
   (runInputT lambdaSettings runStateRepl)
-  (PState { binders       = []
+  (defaultState { binders       = []
           , importPath    = importPath
           , arrowSymbol   = arr
           , lambdaSymbol  = l

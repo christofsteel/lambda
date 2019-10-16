@@ -4,6 +4,7 @@ module Lambda.Program
   , runIO
   , liftId
   , printMaybe
+  , defaultState 
   , PState(..)
   )
 where
@@ -21,16 +22,26 @@ import           System.FilePath.Posix
 import           Data.Char
 
 data PState = PState { binders :: [(Variable, Term)],
+                       reverseLets :: [Variable],
+                       reverseNat :: Bool,
                        importPath :: FilePath,
                        arrowSymbol :: String,
                        lambdaSymbol :: String,
                        explicitParen :: Bool } deriving (Show)
 
+defaultState = PState { binders = []
+                      , importPath = "."
+                      , arrowSymbol = arrowUTF8
+                      , lambdaSymbol = lambdaUTF8 
+                      , explicitParen = False
+                      , reverseLets = []
+                      , reverseNat = True
+                      }
 
 run :: FilePath -> String -> String -> Bool -> Prog -> IO ()
 run importPath arr l ex p = evalStateT
   (runIO p)
-  (PState { binders       = []
+  (defaultState { binders       = []
           , importPath    = importPath
           , arrowSymbol   = arr
           , lambdaSymbol  = l
@@ -38,7 +49,6 @@ run importPath arr l ex p = evalStateT
           }
   )
 
-sh state = lshow (explicitParen state) (lambdaSymbol state)
 
 runStep :: Command -> State PState (Maybe String)
 runStep (Let v t) = do
@@ -48,26 +58,27 @@ runStep (Let v t) = do
 runStep (PrintLn t) = return (Just $ t ++ "\n")
 runStep (Print   t) = return (Just t)
 runStep (PrintT  t) = do
-  state <- get
-  return $ Just $ sh state $ applyLets t (binders state)
+  term <- applyLets t
+  sh <- getShowFunction
+  return $ Just $ sh term
 runStep (PrintNF t) = do
-  state <- get
-  return $ Just $ sh state $ findNF $ applyLets t (binders state)
+  term <- applyLets t
+  sh <- getShowFunction
+  return $ Just $ sh $ findNF term
 runStep (TraceNF t) = do
   state <- get
-  return
-    $  Just
-    $  getSteps (sh state) (arrowSymbol state) (applyLets t (binders state))
-    ++ "\n"
+  term <- applyLets t
+  sh <- getShowFunction
+  return $ Just $ getSteps sh (arrowSymbol state) term ++ "\n"
 runStep (TraceNFMax i t) = do
   state <- get
-  return
-    $ Just
-    $ getStepsMax (sh state) (arrowSymbol state) i (applyLets t (binders state))
-    ++ "\n"
+  term <- applyLets t
+  sh <- getShowFunction
+  return $ Just $ getStepsMax sh (arrowSymbol state) i term ++ "\n"
 runStep (Step v) = do
   state <- get
-  case lbeta $ applyLets (V v) (binders state) of
+  term <- applyLets (V v)
+  case lbeta term of
     Just t  -> put (state { binders = (v, t) : binders state })
     Nothing -> return ()
   return Nothing
@@ -118,5 +129,13 @@ runIO (x : xs) = do
 
 -- This is not the most efficient way, but I thought it was nice to let
 -- the lambda calculus solve its variables by itself
-applyLets :: Term -> [(Variable, Term)] -> Term
-applyLets = foldl (\acc (var, term) -> fromJust $ lbeta $ A (L var acc) term)
+applyLets :: Term -> State PState Term
+applyLets t = foldl (\acc (var, term) -> fromJust $ lbeta $ A (L var acc) term) t . binders <$> get
+
+getShowFunction :: State PState (Term -> String)
+getShowFunction = do
+    state <- get
+    return $ lshow (explicitParen state) (lambdaSymbol state)
+
+applyRevLets :: Term -> Term
+applyRevLets = id
