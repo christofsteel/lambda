@@ -5,7 +5,11 @@ module Lambda.Program
   , liftId
   , printMaybe
   , defaultState 
+  , defaultConfig
+  , Config(..)
   , PState(..)
+  , optionIsTrue
+  , updateConfig
   )
 where
 import           Lambda.Types
@@ -21,32 +25,60 @@ import           Data.Functor.Identity
 import           System.FilePath.Posix
 import           Data.Char
 
+
+data Config = Config { reverseNat :: Bool,
+                       explicitParen :: Bool,
+                       use_utf8 :: Bool} deriving (Show)
+
+defaultConfig = Config { reverseNat = True
+                       , explicitParen = False
+                       , use_utf8 = True }
+
+isCIEq :: String -> String -> Bool
+isCIEq s t = (map toUpper s) == (map toUpper t)
+
+isFalse :: String -> Bool
+isFalse = isCIEq "false"
+
+isTrue :: String -> Bool
+isTrue = isCIEq "true"
+
+optionIsTrue :: String -> String -> String -> Bool
+optionIsTrue option parseoption value = isCIEq parseoption option && isTrue value
+
+optionIsFalse :: String -> String -> String -> Bool
+optionIsFalse option parseoption value = isCIEq parseoption option && isFalse value
+
+updateConfig :: String -> String -> Config -> Either String Config
+updateConfig option value config
+  | optionIsTrue "nat" option value = Right config {reverseNat = True}  
+  | optionIsFalse "nat" option value = Right config {reverseNat = False}  
+  | optionIsTrue "utf8" option value = Right config {use_utf8 = True}  
+  | optionIsFalse "utf8" option value = Right config {use_utf8 = False}  
+  | optionIsTrue "explicit" option value = Right config {explicitParen = True}
+  | optionIsFalse "explicit" option value = Right config {explicitParen = False}
+  | otherwise = Left $ "No such option or value (" ++ option ++ ", " ++ value ++ ")"
+
 data PState = PState { binders :: [(Variable, Term)],
                        reverseLets :: [Variable],
-                       reverseNat :: Bool,
                        importPath :: FilePath,
-                       arrowSymbol :: String,
-                       lambdaSymbol :: String,
-                       explicitParen :: Bool } deriving (Show)
+                       config :: Config} deriving (Show)
 
 defaultState = PState { binders = []
                       , importPath = "."
-                      , arrowSymbol = arrowUTF8
-                      , lambdaSymbol = lambdaUTF8 
-                      , explicitParen = False
+                      , config = defaultConfig 
                       , reverseLets = []
-                      , reverseNat = True
                       }
 
-run :: FilePath -> String -> String -> Bool -> Prog -> IO ()
-run importPath arr l ex p = evalStateT
+run :: FilePath -> Bool -> Bool -> Prog -> IO ()
+run importPath u8 ex p = evalStateT
   (runIO p)
   (defaultState { binders       = []
-          , importPath    = importPath
-          , arrowSymbol   = arr
-          , lambdaSymbol  = l
-          , explicitParen = ex
-          }
+                , config = defaultConfig { use_utf8 = u8
+                                         , explicitParen = ex
+                                         }
+                , importPath    = importPath
+                }
   )
 
 
@@ -65,16 +97,20 @@ runStep (PrintNF t) = do
   term <- applyLets t
   sh <- getShowFunction
   return $ Just $ sh $ findNF term
+runStep (PrintNFMax i t) = do
+  term <- applyLets t
+  sh <- getShowFunction
+  return $ Just $ sh $ findNFMax i term
 runStep (TraceNF t) = do
   state <- get
   term <- applyLets t
   sh <- getShowFunction
-  return $ Just $ getSteps sh (arrowSymbol state) term ++ "\n"
+  return $ Just $ getSteps sh (use_utf8 $ config state) term ++ "\n"
 runStep (TraceNFMax i t) = do
   state <- get
   term <- applyLets t
   sh <- getShowFunction
-  return $ Just $ getStepsMax sh (arrowSymbol state) i term ++ "\n"
+  return $ Just $ getStepsMax sh (use_utf8 $ config state) i term ++ "\n"
 runStep (Step v) = do
   state <- get
   term <- applyLets (V v)
@@ -82,27 +118,11 @@ runStep (Step v) = do
     Just t  -> put (state { binders = (v, t) : binders state })
     Nothing -> return ()
   return Nothing
-runStep (Set option) = do
+runStep (Set option value) = do
   state <- get
-  case map toUpper option of
-    "ASCII" -> do
-      put (state { lambdaSymbol = lambda, arrowSymbol = arrow })
-      return $ Just "ASCII mode enabled"
-    "EXPLICIT" -> do
-      put (state { explicitParen = True })
-      return $ Just "EXPLICIT mode enabled"
-    _ -> return $ Just "No such Option"
-runStep (Unset option) = do
-  state <- get
-  case map toUpper option of
-    "ASCII" -> do
-      put (state { lambdaSymbol = lambdaUTF8, arrowSymbol = arrowUTF8 })
-      return $ Just "ASCII mode disabled"
-    "EXPLICIT" -> do
-      put (state { explicitParen = False })
-      return $ Just "EXPLICIT mode disabled"
-    _ -> return $ Just "No such Option"
-
+  case updateConfig option value (config state) of
+    Left error -> return $ Just error
+    Right newconfig -> put (state {config = newconfig}) >> return Nothing
 
 printMaybe :: Maybe String -> IO ()
 printMaybe Nothing  = return ()
@@ -135,7 +155,7 @@ applyLets t = foldl (\acc (var, term) -> fromJust $ lbeta $ A (L var acc) term) 
 getShowFunction :: State PState (Term -> String)
 getShowFunction = do
     state <- get
-    return $ lshow (explicitParen state) (lambdaSymbol state)
+    return $ lshow (explicitParen $ config state) (use_utf8 $ config state)
 
 applyRevLets :: Term -> Term
 applyRevLets = id

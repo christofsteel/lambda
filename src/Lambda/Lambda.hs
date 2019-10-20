@@ -1,12 +1,14 @@
 module Lambda.Lambda
   ( lbeta
   , findNF
+  , findNFMax
   , getSteps
   , getStepsMax
   )
 where
 
 import           Lambda.Types
+import           Lambda.Consts
 import qualified Data.Set                      as S
 import           Data.Maybe
 
@@ -66,20 +68,24 @@ findNF t = last $ betastepsToNF t
 findNFMax :: Int -> Term -> Term
 findNFMax i t = last $ take i $ betastepsToNF t
 
+getArrow :: Bool -> String
+getArrow True = arrowUTF8
+getArrow False = arrow
+
 -- getSteps sh a t
 -- returns a pretty string of all the betareductions to the normal form
 -- sh is a formatter function Term -> String
 -- a is the string for the arrow. e.g. "->b"
 -- t is the term
-getSteps :: (Term -> String) -> String -> Term -> String
-getSteps sh a t = sh t
-  ++ concatMap (\t -> "\n\t" ++ a ++ " " ++ sh t) (safetail $ betastepsToNF t)
+getSteps :: (Term -> String) -> Bool -> Term -> String
+getSteps sh u8 t = sh t
+  ++ concatMap (\t -> "\n\t" ++ (getArrow u8) ++ " " ++ sh t) (safetail $ betastepsToNF t)
 
 -- getStepsMax sh a i t
 -- like getSteps, but computes only the first i steps
-getStepsMax :: (Term -> String) -> String -> Int -> Term -> String
-getStepsMax sh a i t = sh t ++ concatMap
-  (\t -> "\n\t" ++ a ++ " " ++ sh t)
+getStepsMax :: (Term -> String) -> Bool -> Int -> Term -> String
+getStepsMax sh u8 i t = sh t ++ concatMap
+  (\t -> "\n\t" ++ (getArrow u8) ++ " " ++ sh t)
   (safetail $ take i $ betastepsToNF t)
 
 

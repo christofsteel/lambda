@@ -8,21 +8,27 @@ module Lambda.Types.Term
 where
 
 import           Lambda.ParserHelper
+import           Lambda.Consts
 import           Data.Char
 
 type Variable = String
 data Term = L Variable Term | A Term Term | V Variable deriving Eq
 instance Show Term where
-  show = explShow' "\\"
+  show = explShow' False
 
 lshow True  = explShow'
 lshow False = minShow'
 
+getLambda :: Bool -> String
+getLambda True = lambdaUTF8
+getLambda False = lambda
+
 -- explShow' l t
 -- returns an explicitly parenthesized string of the term t. The lambda sign is l
-explShow' l (L var t ) = "(" ++ l ++ var ++ "." ++ explShow' l t ++ ")"
-explShow' l (A t1  t2) = "(" ++ explShow' l t1 ++ " " ++ explShow' l t2 ++ ")"
-explShow' l (V var   ) = var
+explShow' :: Bool -> Term -> String
+explShow' u8 (L var t ) = "(" ++ (getLambda u8) ++ var ++ "." ++ explShow' u8 t ++ ")"
+explShow' u8 (A t1  t2) = "(" ++ explShow' u8 t1 ++ " " ++ explShow' u8 t2 ++ ")"
+explShow' u8 (V var   ) = var
 
 -- minShow' l t
 -- retuns a minified string of the term t. The lambda sign is l
@@ -32,22 +38,23 @@ explShow' l (V var   ) = var
 -- la.lb.c => la b.c
 -- a (lb.c) => a lb.c
 -- a lb.(c d) => a lb.c d
-minShow' l (L var (L var' t)) = minShow' l (L (var ++ " " ++ var') t)
-minShow' l (L var t         ) = l ++ var ++ "." ++ minShow' l t
-minShow' l (A t1@(A t1' t2'@(L v t')) t2@(A t1'' t2'')) =
-  "(" ++ minShow' l t1 ++ ") (" ++ minShow' l t2 ++ ")"
-minShow' l (A t1@(A t1' t2'@(L v t')) t2) =
-  "(" ++ minShow' l t1 ++ ") " ++ minShow' l t2
-minShow' l (A t1@(A t1' t2') t2@(A t1'' t2'')) =
-  minShow' l t1 ++ " (" ++ minShow' l t2 ++ ")"
-minShow' l (A t1@(A t1' t2') t2) = minShow' l t1 ++ " " ++ minShow' l t2
-minShow' l (A t1@(V v) t2@(V v2)) = minShow' l t1 ++ " " ++ minShow' l t2
-minShow' l (A t1@(V v) t2@(L v2 t2')) = minShow' l t1 ++ " " ++ minShow' l t2
-minShow' l (A t1@(V v) t2) = minShow' l t1 ++ "(" ++ minShow' l t2 ++ ")"
-minShow' l (A t1@(L v t) t2@(A t1' t2')) =
-  "(" ++ minShow' l t1 ++ ") (" ++ minShow' l t2 ++ ")"
-minShow' l (A t1@(L v t) t2) = "(" ++ minShow' l t1 ++ ") " ++ minShow' l t2
-minShow' l (V var          ) = var
+minShow' :: Bool -> Term -> String
+minShow' u8 (L var (L var' t)) = minShow' u8 (L (var ++ " " ++ var') t)
+minShow' u8 (L var t         ) = (getLambda u8) ++ var ++ "." ++ minShow' u8 t
+minShow' u8 (A t1@(A t1' t2'@(L v t')) t2@(A t1'' t2'')) =
+  "(" ++ minShow' u8 t1 ++ ") (" ++ minShow' u8 t2 ++ ")"
+minShow' u8 (A t1@(A t1' t2'@(L v t')) t2) =
+  "(" ++ minShow' u8 t1 ++ ") " ++ minShow' u8 t2
+minShow' u8 (A t1@(A t1' t2') t2@(A t1'' t2'')) =
+  minShow' u8 t1 ++ " (" ++ minShow' u8 t2 ++ ")"
+minShow' u8 (A t1@(A t1' t2') t2) = minShow' u8 t1 ++ " " ++ minShow' u8 t2
+minShow' u8 (A t1@(V v) t2@(V v2)) = minShow' u8 t1 ++ " " ++ minShow' u8 t2
+minShow' u8 (A t1@(V v) t2@(L v2 t2')) = minShow' u8 t1 ++ " " ++ minShow' u8 t2
+minShow' u8 (A t1@(V v) t2) = minShow' u8 t1 ++ "(" ++ minShow' u8 t2 ++ ")"
+minShow' u8 (A t1@(L v t) t2@(A t1' t2')) =
+  "(" ++ minShow' u8 t1 ++ ") (" ++ minShow' u8 t2 ++ ")"
+minShow' u8 (A t1@(L v t) t2) = "(" ++ minShow' u8 t1 ++ ") " ++ minShow' u8 t2
+minShow' u8 (V var          ) = var
 
 -- Grammar
 --

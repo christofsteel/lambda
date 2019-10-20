@@ -35,15 +35,15 @@ completableWords =
 
 isCIPrefixOf n m = map toUpper n `isPrefixOf` map toUpper m
 
-runRepl :: FilePath -> String -> String -> Bool -> IO ()
-runRepl importPath arr l ex = evalStateT
+runRepl :: FilePath -> Bool -> Bool -> IO ()
+runRepl importPath u8 ex = evalStateT
   (runInputT lambdaSettings runStateRepl)
   (defaultState { binders       = []
-          , importPath    = importPath
-          , arrowSymbol   = arr
-          , lambdaSymbol  = l
-          , explicitParen = ex
-          }
+                , importPath    = importPath
+                , config = defaultConfig { explicitParen = ex
+                                         , use_utf8 = u8
+                                         }
+                }
   )
 
 searchFunction :: String -> String -> StateT PState IO [Completion]
@@ -73,7 +73,7 @@ trim = unwords . words
 
 parseCommand :: String -> Command
 parseCommand line = case TR.readEither $ trim line of
-  Left x -> case TR.readEither $ "printT " ++ trim line of
+  Left x -> case TR.readEither $ "printNFMax 100 " ++ trim line of
     Left  err -> Print $ x ++ " " ++ trim line ++ "'"
     Right c   -> c
   Right c -> c

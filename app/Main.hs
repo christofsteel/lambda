@@ -72,18 +72,14 @@ main = do
     then printUsage >> exitSuccess
     else do
       let
-        arr =
-          if "-a" `elem` args || "--ascii" `elem` args then arrow else arrowUTF8
-      let
-        lamb = if "-a" `elem` args || "--ascii" `elem` args
-          then lambda
-          else lambdaUTF8
+        u8 =
+          "-a" `elem` args || "--ascii" `elem` args
       let ex = "-e" `elem` args || "--explicit" `elem` args
       if "-r" `elem` args || "--repl" `elem` args
         then do
           relimportPath <- getCurrentDirectory
           importPath    <- makeAbsolute relimportPath
-          runRepl importPath arr lamb ex
+          runRepl importPath u8 ex
         else do
           (progStr, importPath) <- if "-f" `elem` args || "--file" `elem` args
             then do
@@ -95,5 +91,5 @@ main = do
               importPath    <- makeAbsolute relimportPath
               return (replace '\n' ';' $ last args, importPath)
           let prog = read progStr
-          run importPath arr lamb ex prog
+          run importPath u8 ex prog
 

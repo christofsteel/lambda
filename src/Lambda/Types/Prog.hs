@@ -22,12 +22,12 @@ data Command = Let Variable Term
              | PrintLn String 
              | PrintT Term 
              | PrintNF Term 
+             | PrintNFMax Int Term 
              | TraceNF Term 
              | TraceNFMax Int Term 
              | Import String 
              | Step Variable 
-             | Set String 
-             | Unset String 
+             | Set String String 
              deriving Show
 
 instance {-# OVERLAPPING #-} Read Prog where
@@ -61,13 +61,13 @@ readCommand t =
     ++ readPrint t
     ++ readPrintT t
     ++ readPrintNF t
+    ++ readPrintNFMax t
     ++ readPrintLn t
     ++ readTraceNF t
     ++ readTraceNFMax t
     ++ readImport t
     ++ readStep t
     ++ readSet t
-    ++ readUnset t
 
 readLet t = do
   ("let", u) <- lex t
@@ -102,6 +102,12 @@ readTraceNFMax t = do
   (term        , w) <- readWhiteSpaces readTerm v
   return (TraceNFMax (read max) term, w)
 
+readPrintNFMax t = do
+  ("printNFMax", u) <- lex t
+  (max         , v) <- lex u
+  (term        , w) <- readWhiteSpaces readTerm v
+  return (PrintNFMax (read max) term, w)
+
 readPrintNF t = do
   ("printNF", u) <- lex t
   (term     , v) <- readWhiteSpaces readTerm u
@@ -119,10 +125,6 @@ readStep t = do
 
 readSet t = do
   ("set" , u) <- lex t
-  (option, v) <- readWhiteSpaces (readUntilOneOf ";") u
-  return (Set ((unwords . words) option), v)
-
-readUnset t = do
-  ("unset", u) <- lex t
-  (option , v) <- readWhiteSpaces (readUntilOneOf ";") u
-  return (Unset ((unwords . words) option), v)
+  (option, v) <- lex u
+  (value, w) <- readWhiteSpaces (readUntilOneOf ";") v
+  return (Set ((unwords . words) option) ((unwords.words) value), w)
