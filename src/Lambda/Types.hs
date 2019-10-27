@@ -1,9 +1,11 @@
 module Lambda.Types
-  ( Term(L, A, V)
+  ( ATerm(L, A, V)
+  , Term
   , Variable
   , Prog
   , Command(..)
   , lshow
+  , reverseNatTerm
   )
 where
 import           Lambda.Types.Prog              ( Prog

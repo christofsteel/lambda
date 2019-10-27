@@ -1,18 +1,30 @@
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveFoldable #-}
+
 module Lambda.Types.Term
   ( Variable
-  , Term(L, A, V)
+  , ATerm(L, A, V)
+  , Term
   , lshow
   , readTerm
   , readVar
+  , readLambda
+  , readLvar
+  , reverseNat
+  , reverseNatTerm
   )
 where
 
 import           Lambda.ParserHelper
 import           Lambda.Consts
 import           Data.Char
+import Data.Maybe
 
 type Variable = String
-data Term = L Variable Term | A Term Term | V Variable deriving Eq
+data ATerm a = L a Term | A Term Term | V a deriving (Eq, Ord, Functor, Foldable)
+
+type Term = ATerm Variable
 instance Show Term where
   show = explShow' False
 
@@ -23,10 +35,25 @@ getLambda :: Bool -> String
 getLambda True = lambdaUTF8
 getLambda False = lambda
 
+reverseNat :: Term -> Maybe Int
+reverseNat t@(L s (L z (V y))) = if y == z then Just 0 else Nothing
+reverseNat t@(L s (L z (A x y))) = if x == (V s) then 
+                                             case reverseNat (L s(L z y)) of
+                                               Just n -> Just $ n + 1
+                                               Nothing -> Nothing
+                                            else Nothing
+reverseNat _ = Nothing
+
+reverseNatTerm :: Term -> Term
+reverseNatTerm (V x) = V x
+reverseNatTerm (A p q) = A (reverseNatTerm p) (reverseNatTerm q)
+reverseNatTerm t@(L x p) = case reverseNat t of
+                             Just c -> V (show c)
+                             Nothing -> (L x (reverseNatTerm p))
 -- explShow' l t
 -- returns an explicitly parenthesized string of the term t. The lambda sign is l
 explShow' :: Bool -> Term -> String
-explShow' u8 (L var t ) = "(" ++ (getLambda u8) ++ var ++ "." ++ explShow' u8 t ++ ")"
+explShow' u8 (L var t ) = "(" ++ getLambda u8 ++ var ++ "." ++ explShow' u8 t ++ ")"
 explShow' u8 (A t1  t2) = "(" ++ explShow' u8 t1 ++ " " ++ explShow' u8 t2 ++ ")"
 explShow' u8 (V var   ) = var
 
@@ -40,7 +67,7 @@ explShow' u8 (V var   ) = var
 -- a lb.(c d) => a lb.c d
 minShow' :: Bool -> Term -> String
 minShow' u8 (L var (L var' t)) = minShow' u8 (L (var ++ " " ++ var') t)
-minShow' u8 (L var t         ) = (getLambda u8) ++ var ++ "." ++ minShow' u8 t
+minShow' u8 (L var t         ) = getLambda u8 ++ var ++ "." ++ minShow' u8 t
 minShow' u8 (A t1@(A t1' t2'@(L v t')) t2@(A t1'' t2'')) =
   "(" ++ minShow' u8 t1 ++ ") (" ++ minShow' u8 t2 ++ ")"
 minShow' u8 (A t1@(A t1' t2'@(L v t')) t2) =
@@ -87,7 +114,7 @@ readLambda r = readLambda1 r ++ readParen' readLambda r
 readLambda1 r = do
   (_   , s) <- readOnlyChars "λ\\" r
   (lvar, t) <- readLvar s
-  ('.' , u) <- readWhiteSpaces readChar t
+  ("." , u) <- lex t -- readWhiteSpaces readChar t
   (var , v) <- readTerm u
   return (foldr L (L (last lvar) var) $ init lvar, v) -- binds to the right
 
@@ -128,8 +155,14 @@ readAppl22 reader r = do
   (term, t) <- readWhiteSpaces1 reader r
   return ([term], t)
 
-readVar r = readVar1 r ++ readParen' readVar r
-readVar1 r = do
-  (var, s) <- lex r
-  if not (validVariable var) then fail "No Variable" else return (V var, s)
-validVariable = all (\d -> isAlphaNum d || d == '\'' || d == '_')
+readVar :: ReadS Term
+readVar r = readVar1 [] r ++ readParen' readVar r
+
+readVar1 :: String -> ReadS Term
+readVar1 s "" = fail "Empty"
+readVar1 [] (' ':xs) = readVar1 [] xs
+readVar1 s (d:xs)
+  | isAlphaNum d || d =='\'' || d == '_' = (V (s ++ [d]), xs):(readVar1 (s ++ [d]) xs)
+  | otherwise = fail "No Variable"
+
+-- validVariable = all (\d -> isAlphaNum d || d == '\'' || d == '_')

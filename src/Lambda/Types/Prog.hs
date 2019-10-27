@@ -2,19 +2,22 @@
 module Lambda.Types.Prog
   ( Prog
   , Command(..)
+  , readLet
   )
 where
 
 import           Lambda.Types.Term              ( Variable
                                                 , readVar
                                                 , readTerm
-                                                , Term(V)
+                                                , Term
+                                                , ATerm (V)
                                                 )
 import           Lambda.ParserHelper            ( readOnlyChars
                                                 , readWhiteSpaces
                                                 , readChar
                                                 , readUntilOneOf
                                                 )
+import Control.Monad
 
 type Prog = [Command]
 data Command = Let Variable Term 
@@ -28,6 +31,10 @@ data Command = Let Variable Term
              | Import String 
              | Step Variable 
              | Set String String 
+             | Get String
+             | AddReverse Variable
+             | DelReverse Variable
+             | ShowReverse
              deriving Show
 
 instance {-# OVERLAPPING #-} Read Prog where
@@ -68,6 +75,10 @@ readCommand t =
     ++ readImport t
     ++ readStep t
     ++ readSet t
+    ++ readGet t
+    ++ readAddRev t
+    ++ readDelRev t
+    ++ readShowRev t
 
 readLet t = do
   ("let", u) <- lex t
@@ -116,7 +127,7 @@ readPrintNF t = do
 readImport t = do
   ("import", u) <- lex t
   (file    , v) <- readWhiteSpaces (readUntilOneOf ";") u
-  return (Import ((unwords . words) file), v)
+  return (Import $ (unwords.words) file, v)
 
 readStep t = do
   ("step", u) <- lex t
@@ -128,3 +139,17 @@ readSet t = do
   (option, v) <- lex u
   (value, w) <- readWhiteSpaces (readUntilOneOf ";") v
   return (Set ((unwords . words) option) ((unwords.words) value), w)
+
+readOneArg :: String -> (String -> Command) -> ReadS Command
+readOneArg s con t = do
+    (com, t) <- lex t
+    guard $ com == s
+    (arg, t) <- lex t
+    return (con arg, t)
+
+readGet = readOneArg "get" Get
+readAddRev = readOneArg "addRev" AddReverse
+readDelRev = readOneArg "delRev" DelReverse
+readShowRev t = do
+    ("showRev", t) <- lex t
+    return (ShowReverse, t)
