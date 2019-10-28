@@ -36,7 +36,9 @@ subs (V y) x n | x == y    = n
 subs (A p q) x n = A (subs p x n) (subs q x n)
 subs (L y p) x n
   | y == x = L x p
-  | y /= x && (not (S.member y (fv n)) || not (S.member x (fv p))) = L y (subs p x n)
+  | y /= x && (not (S.member y (fv n)) || not (S.member x (fv p))) = L
+    y
+    (subs p x n)
   | otherwise = L z (subs (subs p y (V z)) x n)
   where z = newFV y (S.union (fv p) (fv n))
 
@@ -69,7 +71,7 @@ findNFMax :: Int -> Term -> Term
 findNFMax i t = last $ take i $ betastepsToNF t
 
 getArrow :: Bool -> String
-getArrow True = arrowUTF8
+getArrow True  = arrowUTF8
 getArrow False = arrow
 
 -- getSteps sh a t
@@ -78,8 +80,9 @@ getArrow False = arrow
 -- a is the string for the arrow. e.g. "->b"
 -- t is the term
 getSteps :: (Term -> String) -> Bool -> Term -> String
-getSteps sh u8 t = sh t
-  ++ concatMap (\t -> "\n\t" ++ getArrow u8 ++ " " ++ sh t) (safetail $ betastepsToNF t)
+getSteps sh u8 t = sh t ++ concatMap
+  (\t -> "\n\t" ++ getArrow u8 ++ " " ++ sh t)
+  (safetail $ betastepsToNF t)
 
 -- getStepsMax sh a i t
 -- like getSteps, but computes only the first i steps

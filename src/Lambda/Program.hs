@@ -31,7 +31,7 @@ import           Control.Monad.State.Strict
 import           Data.Functor.Identity
 import           System.FilePath.Posix
 import           Data.Char
-import qualified Text.Read as TR
+import qualified Text.Read                     as TR
 
 
 class Show c => ConfigValue c where
@@ -40,48 +40,37 @@ class Show c => ConfigValue c where
     showCfg = show
 
 instance ConfigValue Bool where
-    readCfg val
-        | isTrue val = Just True
-        | isFalse val = Just False
-        | otherwise = Nothing
+  readCfg val | isTrue val  = Just True
+              | isFalse val = Just False
+              | otherwise   = Nothing
 
 instance ConfigValue String where
-    readCfg = Just
-    showCfg = id
+  readCfg = Just
+  showCfg = id
 
 instance ConfigValue Int where
-    readCfg = TR.readMaybe
-
-    {-
-data Config = Config { reverseNat :: ConfigValue,
-                       explicitParen :: ConfigValue,
-                       ps1 :: ConfigValue,
-                       use_utf8 :: ConfigValue} deriving (Show)
-                       -}
-                           {-data Config = Config { reverseNat :: Bool,
-                       explicitParen :: Bool,
-                       ps1 :: String,
-                       use_utf8 :: Bool} deriving (Show)
--}
+  readCfg = TR.readMaybe
 
 type Config = M.Map String String
-defaultConfig  :: M.Map String String
-defaultConfig  = M.fromList [ ("rnat", "False")
-                     , ("pnat", "True")
-                     , ("explicit", "False")
-                     , ("ps1", "LAMBDA")
-                     , ("utf8", "True")
-                     , ("steps", "100")
-                     ]
+defaultConfig :: M.Map String String
+defaultConfig = M.fromList
+  [ ("rnat"    , "False")
+  , ("pnat"    , "True")
+  , ("explicit", "False")
+  , ("ps1"     , "LAMBDA")
+  , ("utf8"    , "True")
+  , ("steps"   , "100")
+  ]
 getCfg :: ConfigValue a => String -> a -> Config -> a
-getCfg key def config = let v = M.lookup key config >>= readCfg in
-                  fromMaybe def v
+getCfg key def config =
+  let v = M.lookup key config >>= readCfg in fromMaybe def v
 
 reverseNat, explicitParen, use_utf8 :: Config -> Bool
 reverseNat = getCfg "rnat" False
 parseNat = getCfg "pnat" True
 explicitParen = getCfg "explicit" False
 use_utf8 = getCfg "utf8" True
+
 ps1 :: Config -> String
 ps1 = getCfg "ps1" "LAMBDA"
 steps :: Config -> Int
@@ -97,12 +86,14 @@ isTrue :: String -> Bool
 isTrue = isCIEq "true"
 
 optionIsTrue :: String -> String -> String -> Bool
-optionIsTrue option parseoption value = isCIEq parseoption option && isTrue value
+optionIsTrue option parseoption value =
+  isCIEq parseoption option && isTrue value
 
 optionIsFalse :: String -> String -> String -> Bool
-optionIsFalse option parseoption value = isCIEq parseoption option && isFalse value
+optionIsFalse option parseoption value =
+  isCIEq parseoption option && isFalse value
 
-updateConfig :: ConfigValue a => String -> a-> Config ->  Config
+updateConfig :: ConfigValue a => String -> a -> Config -> Config
 updateConfig k v = M.insert (map toLower k) (showCfg v)
 
 data PState = PState { binders :: [(Variable, Term)],
@@ -110,19 +101,20 @@ data PState = PState { binders :: [(Variable, Term)],
                        importPath :: FilePath,
                        config :: Config} deriving (Show)
 
-defaultState = PState { binders = []
-                      , importPath = "."
-                      , config = defaultConfig
+defaultState = PState { binders     = []
+                      , importPath  = "."
+                      , config      = defaultConfig
                       , reverseLets = []
                       }
 
 run :: FilePath -> Bool -> Bool -> Prog -> IO ()
 run importPath u8 ex p = evalStateT
   (runIO p)
-  (defaultState { binders       = []
-                , config = updateConfig "utf8" u8 $ updateConfig "explicit" ex defaultConfig
-                , importPath    = importPath
-                }
+  (defaultState
+    { binders = []
+    , config = updateConfig "utf8" u8 $ updateConfig "explicit" ex defaultConfig
+    , importPath = importPath
+    }
   )
 
 
@@ -135,29 +127,29 @@ runStep (PrintLn t) = return (Just $ t ++ "\n")
 runStep (Print   t) = return (Just t)
 runStep (PrintT  t) = do
   term <- applyLets t
-  sh <- getShowFunction
+  sh   <- getShowFunction
   return $ Just $ sh term
 runStep (PrintNF t) = do
   term <- applyLets t
-  sh <- getShowFunction
+  sh   <- getShowFunction
   return $ Just $ sh $ findNF term
 runStep (PrintNFMax i t) = do
   term <- applyLets t
-  sh <- getShowFunction
+  sh   <- getShowFunction
   return $ Just $ sh $ findNFMax i term
 runStep (TraceNF t) = do
   state <- get
-  term <- applyLets t
-  sh <- getShowFunction
+  term  <- applyLets t
+  sh    <- getShowFunction
   return $ Just $ getSteps sh (use_utf8 $ config state) term ++ "\n"
 runStep (TraceNFMax i t) = do
   state <- get
-  term <- applyLets t
-  sh <- getShowFunction
+  term  <- applyLets t
+  sh    <- getShowFunction
   return $ Just $ getStepsMax sh (use_utf8 $ config state) i term ++ "\n"
 runStep (Step v) = do
   state <- get
-  term <- applyLets (V v)
+  term  <- applyLets (V v)
   case lbeta term of
     Just t  -> put (state { binders = (v, t) : binders state })
     Nothing -> return ()
@@ -165,19 +157,17 @@ runStep (Step v) = do
 runStep (Set option value) = do
   state <- get
   let newconfig = updateConfig option value (config state)
-  put (state {config = newconfig}) >> return Nothing
-runStep (Get option) =
-    M.lookup option . config <$> get
-runStep (AddReverse v) = do
-    state <- get
-    let reverses = nub $ v:reverseLets state
-    put (state {reverseLets = reverses}) >> return Nothing
+  put (state { config = newconfig }) >> return Nothing
+runStep (Get        option) = M.lookup option . config <$> get
+runStep (AddReverse v     ) = do
+  state <- get
+  let reverses = nub $ v : reverseLets state
+  put (state { reverseLets = reverses }) >> return Nothing
 runStep (DelReverse v) = do
-    state <- get
-    let reverses = filter (v /=) $ reverseLets state
-    put (state {reverseLets  = reverses}) >> return Nothing
-runStep ShowReverse =
-    Just . show . reverseLets <$> get
+  state <- get
+  let reverses = filter (v /=) $ reverseLets state
+  put (state { reverseLets = reverses }) >> return Nothing
+runStep ShowReverse = Just . show . reverseLets <$> get
 
 printMaybe :: Maybe String -> IO ()
 printMaybe Nothing  = return ()
@@ -206,23 +196,25 @@ runIO (x : xs) = do
 -- the lambda calculus solve its variables by itself
 applyLets :: Term -> State PState Term
 applyLets t = do
-    state <- get
-    let t' = if parseNat (config state) then applyNats t else t
-    return $ foldl (\acc (var, term) -> fromJust $ lbeta $ A (L var acc) term) t' (binders state)
+  state <- get
+  let t' = if parseNat (config state) then applyNats t else t
+  return $ foldl (\acc (var, term) -> fromJust $ lbeta $ A (L var acc) term)
+                 t'
+                 (binders state)
 
 cn :: Int -> Term
 cn 0 = L "s" (L "z" (V "z"))
-cn n = case cn (n-1) of
-        L "s" (L "z" m) -> L "s" (L "z" (A (V "s") m))
+cn n = case cn (n - 1) of
+  L "s" (L "z" m) -> L "s" (L "z" (A (V "s") m))
 
 
 applyNats' :: Term -> [String] -> Term
 applyNats' (V c) bound
-    | c `elem` bound = V c
-    | otherwise = case TR.readMaybe c of
-                    Just i -> if i >= 0 then cn i else V c
-                    Nothing -> V c
-applyNats' (L v p) bound = L v $ applyNats' p (v:bound)
+  | c `elem` bound = V c
+  | otherwise = case TR.readMaybe c of
+    Just i  -> if i >= 0 then cn i else V c
+    Nothing -> V c
+applyNats' (L v p) bound = L v $ applyNats' p (v : bound)
 applyNats' (A p q) bound = A (applyNats' p bound) (applyNats' q bound)
 
 applyNats :: Term -> Term
@@ -230,35 +222,41 @@ applyNats t = applyNats' t []
 
 getShowFunction :: State PState (Term -> String)
 getShowFunction = do
-    state <- get
-    let rn = reverseNat $ config state
-    let wrapper = if rn then reverseNatTerm else id
-    letsWrapper <- getRevLetsFunction
-    return $ lshow (explicitParen $ config state) (use_utf8 $ config state).letsWrapper.wrapper
+  state <- get
+  let rn      = reverseNat $ config state
+  let wrapper = if rn then reverseNatTerm else id
+  letsWrapper <- getRevLetsFunction
+  return
+    $ lshow (explicitParen $ config state) (use_utf8 $ config state)
+    . letsWrapper
+    . wrapper
 
+-- TODO check for alpha-equiv
 getRevLetsMap :: State PState (M.Map Term Variable)
 getRevLetsMap = do
-    state <- get
-    let relevant = filter (\(a,b) -> a `elem` reverseLets state) $ binders state
-    return (M.fromList $ map (\(a, b) -> (b, a)) relevant)
+  state <- get
+  let relevant = filter (\(a, b) -> a `elem` reverseLets state) $ binders state
+  return (M.fromList $ map (\(a, b) -> (b, a)) relevant)
 
 getRevLetsFunction :: State PState (Term -> Term)
 getRevLetsFunction = do
-    map <- getRevLetsMap
-    return $ applyRevLets' map []
+  map <- getRevLetsMap
+  return $ applyRevLets' map []
 
 
 applyRevLets :: Term -> State PState Term
 applyRevLets term = do
-    state <- get
-    let relevant = filter (\(a,b) -> a `elem` reverseLets state) $ binders state
-    return $ applyRevLets' (M.fromList $ map (\(a, b) -> (b, a)) relevant) [] term
+  state <- get
+  let relevant = filter (\(a, b) -> a `elem` reverseLets state) $ binders state
+  return $ applyRevLets' (M.fromList $ map (\(a, b) -> (b, a)) relevant) [] term
 
-
+-- TODO this is also not quite right...
 applyRevLets' :: M.Map Term Variable -> [Variable] -> Term -> Term
 applyRevLets' map l term = case M.lookup term map of
-                           Just v -> if v `elem` l then term else V v
-                           Nothing -> case term of
-                                        V v -> V v
-                                        A p q -> A (applyRevLets' map l p) (applyRevLets' map l q)
-                                        L x p -> L x (applyRevLets' map (x:l) p)
+  Just v  -> if v `elem` l then rec_call map l term else V v
+  Nothing -> rec_call map l term
+ where
+  rec_call map l term = case term of
+    V v   -> V v
+    A p q -> A (applyRevLets' map l p) (applyRevLets' map l q)
+    L x p -> L x (applyRevLets' map (x : l) p)

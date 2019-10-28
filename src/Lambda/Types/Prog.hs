@@ -10,27 +10,27 @@ import           Lambda.Types.Term              ( Variable
                                                 , readVar
                                                 , readTerm
                                                 , Term
-                                                , ATerm (V)
+                                                , ATerm(V)
                                                 )
 import           Lambda.ParserHelper            ( readOnlyChars
                                                 , readWhiteSpaces
                                                 , readChar
                                                 , readUntilOneOf
                                                 )
-import Control.Monad
+import           Control.Monad
 
 type Prog = [Command]
-data Command = Let Variable Term 
-             | Print String 
-             | PrintLn String 
-             | PrintT Term 
-             | PrintNF Term 
-             | PrintNFMax Int Term 
-             | TraceNF Term 
-             | TraceNFMax Int Term 
-             | Import String 
-             | Step Variable 
-             | Set String String 
+data Command = Let Variable Term
+             | Print String
+             | PrintLn String
+             | PrintT Term
+             | PrintNF Term
+             | PrintNFMax Int Term
+             | TraceNF Term
+             | TraceNFMax Int Term
+             | Import String
+             | Step Variable
+             | Set String String
              | Get String
              | AddReverse Variable
              | DelReverse Variable
@@ -127,7 +127,7 @@ readPrintNF t = do
 readImport t = do
   ("import", u) <- lex t
   (file    , v) <- readWhiteSpaces (readUntilOneOf ";") u
-  return (Import $ (unwords.words) file, v)
+  return (Import $ (unwords . words) file, v)
 
 readStep t = do
   ("step", u) <- lex t
@@ -137,19 +137,19 @@ readStep t = do
 readSet t = do
   ("set" , u) <- lex t
   (option, v) <- lex u
-  (value, w) <- readWhiteSpaces (readUntilOneOf ";") v
-  return (Set ((unwords . words) option) ((unwords.words) value), w)
+  (value , w) <- readWhiteSpaces (readUntilOneOf ";") v
+  return (Set ((unwords . words) option) ((unwords . words) value), w)
 
 readOneArg :: String -> (String -> Command) -> ReadS Command
 readOneArg s con t = do
-    (com, t) <- lex t
-    guard $ com == s
-    (arg, t) <- lex t
-    return (con arg, t)
+  (com, t) <- lex t
+  guard $ com == s
+  (arg, t) <- lex t
+  return (con arg, t)
 
 readGet = readOneArg "get" Get
 readAddRev = readOneArg "addRev" AddReverse
 readDelRev = readOneArg "delRev" DelReverse
 readShowRev t = do
-    ("showRev", t) <- lex t
-    return (ShowReverse, t)
+  ("showRev", t) <- lex t
+  return (ShowReverse, t)

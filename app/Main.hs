@@ -71,9 +71,7 @@ main = do
   if "-h" `elem` args || "--help" `elem` args || null args
     then printUsage >> exitSuccess
     else do
-      let
-        u8 =
-          "-a" `elem` args || "--ascii" `elem` args
+      let u8 = "-a" `elem` args || "--ascii" `elem` args
       let ex = "-e" `elem` args || "--explicit" `elem` args
       if "-r" `elem` args || "--repl" `elem` args
         then do

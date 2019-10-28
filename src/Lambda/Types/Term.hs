@@ -19,7 +19,7 @@ where
 import           Lambda.ParserHelper
 import           Lambda.Consts
 import           Data.Char
-import Data.Maybe
+import           Data.Maybe
 
 type Variable = String
 data ATerm a = L a Term | A Term Term | V a deriving (Eq, Ord, Functor, Foldable)
@@ -32,30 +32,32 @@ lshow True  = explShow'
 lshow False = minShow'
 
 getLambda :: Bool -> String
-getLambda True = lambdaUTF8
+getLambda True  = lambdaUTF8
 getLambda False = lambda
 
 reverseNat :: Term -> Maybe Int
-reverseNat t@(L s (L z (V y))) = if y == z then Just 0 else Nothing
-reverseNat t@(L s (L z (A x y))) = if x == V s then
-                                             case reverseNat (L s(L z y)) of
-                                               Just n -> Just $ n + 1
-                                               Nothing -> Nothing
-                                            else Nothing
+reverseNat t@(L s (L z (V y  ))) = if y == z then Just 0 else Nothing
+reverseNat t@(L s (L z (A x y))) = if x == V s
+  then case reverseNat (L s (L z y)) of
+    Just n  -> Just $ n + 1
+    Nothing -> Nothing
+  else Nothing
 reverseNat _ = Nothing
 
 reverseNatTerm :: Term -> Term
-reverseNatTerm (V x) = V x
-reverseNatTerm (A p q) = A (reverseNatTerm p) (reverseNatTerm q)
+reverseNatTerm (  V x  ) = V x
+reverseNatTerm (  A p q) = A (reverseNatTerm p) (reverseNatTerm q)
 reverseNatTerm t@(L x p) = case reverseNat t of
-                             Just c -> V (show c)
-                             Nothing -> L x (reverseNatTerm p)
+  Just c  -> V (show c)
+  Nothing -> L x (reverseNatTerm p)
 -- explShow' l t
 -- returns an explicitly parenthesized string of the term t. The lambda sign is l
 explShow' :: Bool -> Term -> String
-explShow' u8 (L var t ) = "(" ++ getLambda u8 ++ var ++ "." ++ explShow' u8 t ++ ")"
-explShow' u8 (A t1  t2) = "(" ++ explShow' u8 t1 ++ " " ++ explShow' u8 t2 ++ ")"
-explShow' u8 (V var   ) = var
+explShow' u8 (L var t) =
+  "(" ++ getLambda u8 ++ var ++ "." ++ explShow' u8 t ++ ")"
+explShow' u8 (A t1 t2) =
+  "(" ++ explShow' u8 t1 ++ " " ++ explShow' u8 t2 ++ ")"
+explShow' u8 (V var) = var
 
 -- minShow' l t
 -- retuns a minified string of the term t. The lambda sign is l
@@ -76,7 +78,8 @@ minShow' u8 (A t1@(A t1' t2') t2@(A t1'' t2'')) =
   minShow' u8 t1 ++ " (" ++ minShow' u8 t2 ++ ")"
 minShow' u8 (A t1@(A t1' t2') t2) = minShow' u8 t1 ++ " " ++ minShow' u8 t2
 minShow' u8 (A t1@(V v) t2@(V v2)) = minShow' u8 t1 ++ " " ++ minShow' u8 t2
-minShow' u8 (A t1@(V v) t2@(L v2 t2')) = minShow' u8 t1 ++ " " ++ minShow' u8 t2
+minShow' u8 (A t1@(V v) t2@(L v2 t2')) =
+  minShow' u8 t1 ++ " " ++ minShow' u8 t2
 minShow' u8 (A t1@(V v) t2) = minShow' u8 t1 ++ "(" ++ minShow' u8 t2 ++ ")"
 minShow' u8 (A t1@(L v t) t2@(A t1' t2')) =
   "(" ++ minShow' u8 t1 ++ ") (" ++ minShow' u8 t2 ++ ")"
@@ -159,10 +162,12 @@ readVar :: ReadS Term
 readVar r = readVar1 [] r ++ readParen' readVar r
 
 readVar1 :: String -> ReadS Term
-readVar1 s "" = fail "Empty"
-readVar1 [] (' ':xs) = readVar1 [] xs
-readVar1 s (d:xs)
-  | isAlphaNum d || d =='\'' || d == '_' = (V (s ++ [d]), xs):readVar1 (s ++ [d]) xs
-  | otherwise = fail "No Variable"
+readVar1 s  ""         = fail "Empty"
+readVar1 [] (' ' : xs) = readVar1 [] xs
+readVar1 s (d : xs)
+  | isAlphaNum d || d == '\'' || d == '_'
+  = (V (s ++ [d]), xs) : readVar1 (s ++ [d]) xs
+  | otherwise
+  = fail "No Variable"
 
 -- validVariable = all (\d -> isAlphaNum d || d == '\'' || d == '_')
