@@ -14,6 +14,7 @@ Next clone the repository (or [download](https://github.com/christofsteel/lambda
 Now enter the cloned repository `lambda` and install it (If you downloaded the zip you have to enter the extracted folder. It is usually called `lambda-master`)
 
     cd lambda
+    stack init
     stack install
 
 ## Running
