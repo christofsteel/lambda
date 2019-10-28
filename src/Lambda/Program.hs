@@ -29,7 +29,7 @@ import           Data.List
 import qualified Data.Map.Strict               as M
 import           Control.Monad.State.Strict
 import           Data.Functor.Identity
-import           System.FilePath.Posix
+import           System.FilePath
 import           Data.Char
 import qualified Text.Read                     as TR
 

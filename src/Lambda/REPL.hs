@@ -12,7 +12,7 @@ import           System.Exit
 import           Data.Maybe
 import           Data.Char
 import           Control.Monad.State.Strict
-import           System.FilePath.Posix
+import           System.FilePath
 import           System.Console.Haskeline
 import           System.Console.Haskeline.Completion
 import           Control.Exception             as E
