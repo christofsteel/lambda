@@ -37,7 +37,7 @@ getLambda False = lambda
 
 reverseNat :: Term -> Maybe Int
 reverseNat t@(L s (L z (V y))) = if y == z then Just 0 else Nothing
-reverseNat t@(L s (L z (A x y))) = if x == (V s) then 
+reverseNat t@(L s (L z (A x y))) = if x == V s then
                                              case reverseNat (L s(L z y)) of
                                                Just n -> Just $ n + 1
                                                Nothing -> Nothing
@@ -49,7 +49,7 @@ reverseNatTerm (V x) = V x
 reverseNatTerm (A p q) = A (reverseNatTerm p) (reverseNatTerm q)
 reverseNatTerm t@(L x p) = case reverseNat t of
                              Just c -> V (show c)
-                             Nothing -> (L x (reverseNatTerm p))
+                             Nothing -> L x (reverseNatTerm p)
 -- explShow' l t
 -- returns an explicitly parenthesized string of the term t. The lambda sign is l
 explShow' :: Bool -> Term -> String
@@ -162,7 +162,7 @@ readVar1 :: String -> ReadS Term
 readVar1 s "" = fail "Empty"
 readVar1 [] (' ':xs) = readVar1 [] xs
 readVar1 s (d:xs)
-  | isAlphaNum d || d =='\'' || d == '_' = (V (s ++ [d]), xs):(readVar1 (s ++ [d]) xs)
+  | isAlphaNum d || d =='\'' || d == '_' = (V (s ++ [d]), xs):readVar1 (s ++ [d]) xs
   | otherwise = fail "No Variable"
 
 -- validVariable = all (\d -> isAlphaNum d || d == '\'' || d == '_')

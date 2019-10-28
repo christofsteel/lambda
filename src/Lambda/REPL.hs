@@ -58,12 +58,10 @@ searchFunction' pre start
   | pre == "get" || pre == "set" = do
       state <- get
       return $ map simpleCompletion $ filter (start `isCIPrefixOf`) $ M.keys (config state)
-  | pre == "addRev" = do
-      state <- get
-      return $ map simpleCompletion $ map fst $ binders state
-  | pre == "delRev" = do
-      state <- get
-      return $ map simpleCompletion $ reverseLets state
+  | pre == "addRev" =
+      map (simpleCompletion . fst) . binders <$> get
+  | pre == "delRev" =
+      map simpleCompletion . reverseLets <$> get
   | otherwise = do
       state <- get
       let names = completableWords ++ map fst (binders state)
@@ -85,8 +83,8 @@ parseCommand :: String -> State PState Command
 parseCommand line = do
     state <- get
     case TR.readEither $ trim line of
-      Left x -> case TR.readEither $ "printNFMax "++ (show $ steps $ config state) ++ " " ++ trim line of
-                  Left  err -> return $ Print $ x ++ " `printNFMax " ++ (show $ steps $ config state) ++ " " ++ trim line ++ "`"
+      Left x -> case TR.readEither $ "printNFMax "++ show (steps $ config state) ++ " " ++ trim line of
+                  Left  err -> return $ Print $ x ++ " `printNFMax " ++ show (steps $ config state) ++ " " ++ trim line ++ "`"
                   Right c   -> return c
       Right c -> return c
 

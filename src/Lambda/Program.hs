@@ -75,7 +75,7 @@ defaultConfig  = M.fromList [ ("rnat", "False")
                      ]
 getCfg :: ConfigValue a => String -> a -> Config -> a
 getCfg key def config = let v = M.lookup key config >>= readCfg in
-                  fromMaybe def v 
+                  fromMaybe def v
 
 reverseNat, explicitParen, use_utf8 :: Config -> Bool
 reverseNat = getCfg "rnat" False
@@ -166,21 +166,18 @@ runStep (Set option value) = do
   state <- get
   let newconfig = updateConfig option value (config state)
   put (state {config = newconfig}) >> return Nothing
-runStep (Get option) = do
-    state <- get
-    return $ M.lookup option (config state)
+runStep (Get option) =
+    M.lookup option . config <$> get
 runStep (AddReverse v) = do
     state <- get
     let reverses = nub $ v:reverseLets state
     put (state {reverseLets = reverses}) >> return Nothing
 runStep (DelReverse v) = do
     state <- get
-    let reverses = filter ((/=) v) $ reverseLets state
+    let reverses = filter (v /=) $ reverseLets state
     put (state {reverseLets  = reverses}) >> return Nothing
-runStep (ShowReverse) = do
-    state <- get
-    return $ Just $ show $ reverseLets state
-
+runStep ShowReverse =
+    Just . show . reverseLets <$> get
 
 printMaybe :: Maybe String -> IO ()
 printMaybe Nothing  = return ()
@@ -235,27 +232,27 @@ getShowFunction :: State PState (Term -> String)
 getShowFunction = do
     state <- get
     let rn = reverseNat $ config state
-    let wrapper = if rn then \t -> reverseNatTerm t else id
+    let wrapper = if rn then reverseNatTerm else id
     letsWrapper <- getRevLetsFunction
-    return $ (lshow (explicitParen $ config state) (use_utf8 $ config state)).letsWrapper.wrapper
+    return $ lshow (explicitParen $ config state) (use_utf8 $ config state).letsWrapper.wrapper
 
 getRevLetsMap :: State PState (M.Map Term Variable)
 getRevLetsMap = do
     state <- get
     let relevant = filter (\(a,b) -> a `elem` reverseLets state) $ binders state
-    return (M.fromList $ map (\(a, b) -> (b, a)) $ relevant)
+    return (M.fromList $ map (\(a, b) -> (b, a)) relevant)
 
 getRevLetsFunction :: State PState (Term -> Term)
 getRevLetsFunction = do
     map <- getRevLetsMap
-    return $ applyRevLets' map [] 
+    return $ applyRevLets' map []
 
 
 applyRevLets :: Term -> State PState Term
 applyRevLets term = do
     state <- get
     let relevant = filter (\(a,b) -> a `elem` reverseLets state) $ binders state
-    return $ applyRevLets' (M.fromList $ map (\(a, b) -> (b, a)) $ relevant) [] term 
+    return $ applyRevLets' (M.fromList $ map (\(a, b) -> (b, a)) relevant) [] term
 
 
 applyRevLets' :: M.Map Term Variable -> [Variable] -> Term -> Term
@@ -264,4 +261,4 @@ applyRevLets' map l term = case M.lookup term map of
                            Nothing -> case term of
                                         V v -> V v
                                         A p q -> A (applyRevLets' map l p) (applyRevLets' map l q)
-                                        L x p -> L x (applyRevLets' map (x:l) p) 
+                                        L x p -> L x (applyRevLets' map (x:l) p)

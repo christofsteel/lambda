@@ -79,13 +79,13 @@ getArrow False = arrow
 -- t is the term
 getSteps :: (Term -> String) -> Bool -> Term -> String
 getSteps sh u8 t = sh t
-  ++ concatMap (\t -> "\n\t" ++ (getArrow u8) ++ " " ++ sh t) (safetail $ betastepsToNF t)
+  ++ concatMap (\t -> "\n\t" ++ getArrow u8 ++ " " ++ sh t) (safetail $ betastepsToNF t)
 
 -- getStepsMax sh a i t
 -- like getSteps, but computes only the first i steps
 getStepsMax :: (Term -> String) -> Bool -> Int -> Term -> String
 getStepsMax sh u8 i t = sh t ++ concatMap
-  (\t -> "\n\t" ++ (getArrow u8) ++ " " ++ sh t)
+  (\t -> "\n\t" ++ getArrow u8 ++ " " ++ sh t)
   (safetail $ take i $ betastepsToNF t)
 
 
