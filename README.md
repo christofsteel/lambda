@@ -4,8 +4,40 @@
 
 ## Installation
 
+Installation can (and should) be done with `stack`, so `stack` must be installed prior. If you are on Linux, you can install `stack` via your distributions package manager, on macOS it can be installed via brew and for windows there exists a dedicated installer. See https://docs.haskellstack.org/en/stable/install_and_upgrade/ for detailed instructions.
+
+Next clone or download the repository
+
+    # clone
+    git clone https://github.com/christofsteel/lambda.git
+    
+    # download
+    wget https://github.com/christofsteel/lambda/archive/master.zip
+    unzip master.zip
+    mv master-lambda lambda
+
+Now install `lambda`
+
+    cd lambda
+    stack install
+
 ## Running
 
+There are three ways to run `lambda`
+
+  1. Call with a file
+
+      lambda -f examples/exampleA.l
+
+  2. Call with a string
+
+      lambda "let I=\x.x; printNF I I"
+
+  3. Open a REPL
+
+      lambda -r
+
+See `lambda --help` for a complete list of arguments
 
 ## Terms
 
