@@ -20,8 +20,9 @@ Parentheses are optional. If they are not present, the binding of operators foll
 
 To form a program you can use the following commands
 
-+------------------------------+----------------------------------------------------------------+
-|  **Command**                 |  **Description**                                               |
+
+|  Command                     |  Description                                                   |
+| ---------------------------- | -------------------------------------------------------------- |
 |  `import` File               |  Imports a file and executes it                                |
 |  `let ` Variable ` = ` Term  |  Defines a Variable to be expanded to a Term in later commands |
 |  `print` Text                |  Prints Text without a newline                                 |
@@ -37,18 +38,19 @@ To form a program you can use the following commands
 |  `addRev` Variable           |  Notes, that terms corresponding to the Variable will be printed as the Variable, not as the Term  |
 |  `delRev` Variable           |  Removes the Variable from the above list                      |
 |  `showRev`                   |  Shows all variables, that will not be shown as lambdaterms    |
-+------------------------------+----------------------------------------------------------------+
+
 
 ## Configuration
 
 The following Options exist and can be set with `set`
 
-+--------------+-----------------------+---------------------+-------------------------------------+
-|  **Option**  |  **Possible Values**  |  **Default Value**  |  **Descrition**                     |
-|  `utf8`      |  `True`, `False`      |  `False`            |  Show a real lambda, beta and arrow |
-|  `explicit`  |  `True`, `False`      |  `False`            |  Shows every parentheses            |
-|  `pnat`      |  `True`, `False`      |  `True`             |  Interpret natural numbers as church numerals  |
+
+|    Option    |    Possible Values    |    Default Value    |    Descrition                                            |
+| ------------ | --------------------- | ------------------- | -------------------------------------------------------- |
+|  `utf8`      |  `True`, `False`      |  `False`            |  Show a real lambda, beta and arrow                      |
+|  `explicit`  |  `True`, `False`      |  `False`            |  Shows every parentheses                                 |
+|  `pnat`      |  `True`, `False`      |  `True`             |  Interpret natural numbers as church numerals            |
 |  `rnat`      |  `True`, `False`      |  `False`            |  If a Term looks like a church numeral, show the number  |
-|  `ps1`       |  Any String           |  `LAMBDA`           |  Prompt to show in REPL mode        |
-|  `steps`     |  Any natural number   |  `100`              |  Steps to calculate in REPL mode    |
-+--------------+-----------------------+---------------------+-------------------------------------+
+|  `ps1`       |  Any String           |  `LAMBDA`           |  Prompt to show in REPL mode                             |
+|  `steps`     |  Any natural number   |  `100`              |  Steps to calculate in REPL mode                         |
+
